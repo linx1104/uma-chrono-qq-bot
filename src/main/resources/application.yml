@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+bot:
+  qq:
+    app-id: "1905394312"
+    # 必须通过环境变量注入: QQ_APP_SECRET
+    app-secret: ${QQ_APP_SECRET:}
+    # 1<<25: 群聊@机器人事件 + 私聊事件
+    intents: 33554432
+    enabled: true
+  capsolver:
+    # 必须通过环境变量注入: CAPSOLVER_KEY
+    api-key: ${CAPSOLVER_KEY:}
+  chrono:
+    sitekey: "0x4AAAAAADh4zMPHZEqdaXLo"
+    website-url: "https://chronogenesis.net/club_profile?circle_id=%E7%99%BD%E7%8C%AB%E6%B5%B7%E8%B3%8A%E8%88%B9&jp="
+    carrot-seed: "chrono-bot-fixed-fingerprint-v1"
+  # 社团数据缓存分钟数 (站点数据每日更新, 30 分钟足够)
+  cache-ttl-minutes: 30
+  # 启动时预热一次验证会话 (避免第一条查询等待验证)
+  warmup: true
+  warmup-club: "白猫海賊船"
+  # 社团别名 (格式: 别名=正式社团名)
+  alias:
+    - "白猫=白猫海賊船"
+    - "海贼船=白猫海賊船"
+  # 群绑定记录文件 (相对工作目录)
+  binding-file: "bindings.json"
+
+logging:
+  level:
+    com.linxin.chronobot: INFO

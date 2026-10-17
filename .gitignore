@@ -1,0 +1,10 @@
+target/
+*.class
+.idea/
+*.iml
+.vscode/
+
+# runtime data (contains QQ openids)
+bindings.json
+*.env
+.env*
