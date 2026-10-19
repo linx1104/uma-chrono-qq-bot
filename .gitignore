@@ -6,5 +6,9 @@ target/
 
 # runtime data (contains QQ openids)
 bindings.json
+memory/
 *.env
 .env*
+
+# club fan history (runtime)
+club-fans-history.json

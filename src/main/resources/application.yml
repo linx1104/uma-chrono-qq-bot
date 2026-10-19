@@ -12,6 +12,27 @@ bot:
   capsolver:
     # 必须通过环境变量注入: CAPSOLVER_KEY
     api-key: ${CAPSOLVER_KEY:}
+  deepseek:
+    # 必须通过环境变量注入: DEEPSEEK_API_KEY
+    api-key: ${DEEPSEEK_API_KEY:}
+    api-url: "https://api.deepseek.com/chat/completions"
+    model: "deepseek-chat"
+    timeout-seconds: 60
+  chat:
+    enabled: true
+    # 前 N 条消息原样作为基础记忆 (零 token)
+    base-messages: 10
+    # 单群友记忆上限 (字符)
+    max-memory-chars: 10000
+    # 记忆目录 (相对工作目录)
+    memory-dir: "memory"
+    # 人设文件 (优先读工作目录, 否则读 jar 内置资源)
+    persona-file: "persona.md"
+    # 全量群消息接话触发: 打分达 min-score 即回, 另有 random-percent 概率随机插话
+    trigger:
+      min-score: 3
+      random-percent: 3
+      group-cooldown-seconds: 90
   chrono:
     sitekey: "0x4AAAAAADh4zMPHZEqdaXLo"
     website-url: "https://chronogenesis.net/club_profile?circle_id=%E7%99%BD%E7%8C%AB%E6%B5%B7%E8%B3%8A%E8%88%B9&jp="
@@ -27,6 +48,8 @@ bot:
     - "海贼船=白猫海賊船"
   # 群绑定记录文件 (相对工作目录)
   binding-file: "bindings.json"
+  # 社团月度粉丝记忆文件 (相对工作目录)
+  history-file: "club-fans-history.json"
 
 logging:
   level:

@@ -11,7 +11,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.Map;
 
 /**
@@ -101,6 +104,82 @@ public class QqHttpApi {
             post(url, body);
         } catch (Exception e) {
             log.error("私聊回复失败", e);
+        }
+    }
+
+    /**
+     * 上传群聊图片 (file_type=1), 返回 file_info
+     */
+    public String uploadGroupImage(String groupOpenid, Path image) throws Exception {
+        return uploadFile(API_BASE + "/v2/groups/" + groupOpenid + "/files", image);
+    }
+
+    /**
+     * 上传私聊图片 (file_type=1), 返回 file_info
+     */
+    public String uploadC2cImage(String openid, Path image) throws Exception {
+        return uploadFile(API_BASE + "/v2/users/" + openid + "/files", image);
+    }
+
+    private String uploadFile(String url, Path image) throws Exception {
+        byte[] bytes = Files.readAllBytes(image);
+        if (bytes.length > 5 * 1024 * 1024) {
+            throw new IllegalStateException("图片超过 5MB 上限: " + image);
+        }
+        String body = mapper.writeValueAsString(Map.of(
+                "file_type", 1,
+                "file_data", Base64.getEncoder().encodeToString(bytes)
+        ));
+        HttpRequest req = HttpRequest.newBuilder(URI.create(url))
+                .timeout(Duration.ofSeconds(30))
+                .header("Content-Type", "application/json")
+                .header("Authorization", "QQBot " + accessToken())
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+        HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
+        if (resp.statusCode() >= 300) {
+            throw new IllegalStateException("上传图片失败 HTTP " + resp.statusCode() + ": " + resp.body());
+        }
+        JsonNode json = mapper.readTree(resp.body());
+        String fi = json.path("file_info").asText();
+        if (fi.isBlank()) {
+            throw new IllegalStateException("上传图片未返回 file_info: " + resp.body());
+        }
+        return fi;
+    }
+
+    /**
+     * 群聊发送富媒体消息 (图片, msg_type=7)
+     */
+    public void sendGroupMedia(String groupOpenid, String msgId, int msgSeq, String fileInfo) {
+        try {
+            String url = API_BASE + "/v2/groups/" + groupOpenid + "/messages";
+            String body = mapper.writeValueAsString(Map.of(
+                    "msg_type", 7,
+                    "media", Map.of("file_info", fileInfo),
+                    "msg_id", msgId,
+                    "msg_seq", msgSeq
+            ));
+            post(url, body);
+        } catch (Exception e) {
+            log.error("群聊图片发送失败", e);
+        }
+    }
+
+    /**
+     * 私聊发送富媒体消息 (图片, msg_type=7)
+     */
+    public void sendC2cMedia(String openid, String msgId, String fileInfo) {
+        try {
+            String url = API_BASE + "/v2/users/" + openid + "/messages";
+            String body = mapper.writeValueAsString(Map.of(
+                    "msg_type", 7,
+                    "media", Map.of("file_info", fileInfo),
+                    "msg_id", msgId
+            ));
+            post(url, body);
+        } catch (Exception e) {
+            log.error("私聊图片发送失败", e);
         }
     }
 

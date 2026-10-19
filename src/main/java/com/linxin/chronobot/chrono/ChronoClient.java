@@ -163,6 +163,7 @@ public class ChronoClient {
             return new ClubData(
                     name,
                     c.path("name").asText(name),
+                    c.path("circle_id").asLong(),
                     c.path("fan_count").asLong(),
                     c.path("daily_average").asLong(),
                     c.path("monthly_average").asLong(),
@@ -175,6 +176,88 @@ public class ChronoClient {
         }
         String msg = root.path("message").asText();
         throw new ClubNotFoundException(msg == null || msg.isBlank() ? "未找到社团: " + name : msg);
+    }
+
+    /** 调试: 返回某社团的原始 JSON 响应 (不缓存), extraQuery 为附加查询串 (如 sdate=2026-09-01), endpoint 默认 club_profile */
+    public String queryClubRaw(String name, String extraQuery, String endpoint) throws Exception {
+        try {
+            return fetchRaw(name, extraQuery, endpoint);
+        } catch (NeedsVerifyException e) {
+            ensureVerified();
+            return fetchRaw(name, extraQuery, endpoint);
+        }
+    }
+
+    private String fetchRaw(String name, String extraQuery, String endpoint) throws Exception {
+        String ep = (endpoint == null || endpoint.isBlank()) ? "club_profile" : endpoint;
+        String url = API_BASE + "/jp/" + ep + "?circle_id="
+                + URLEncoder.encode(name, StandardCharsets.UTF_8) + "&jp="
+                + (extraQuery == null || extraQuery.isBlank() ? "" : "&" + extraQuery);
+        HttpRequest req = requestBuilder(url).GET().build();
+        SimpleResp resp = send(req);
+        if (resp.statusCode() == 422) {
+            throw new NeedsVerifyException();
+        }
+        if (resp.statusCode() != 200) {
+            throw new IllegalStateException("HTTP " + resp.statusCode());
+        }
+        return resp.body();
+    }
+
+    /**
+     * 查询某个月份的成员数据 (club_data_by_month), 返回每个成员当月最后一天的
+     * 粉丝数 (月末粉丝) 与当月累计增量。sdate 形如 2026-09-01, circleId 为数字社团 ID。
+     */
+    public MonthData queryMonth(long circleId, String sdate) throws Exception {
+        String url = API_BASE + "/jp/club_data_by_month?circle_id=" + circleId
+                + "&jp=&sdate=" + sdate;
+        try {
+            return fetchMonth(url, sdate);
+        } catch (NeedsVerifyException e) {
+            ensureVerified();
+            return fetchMonth(url, sdate);
+        }
+    }
+
+    private MonthData fetchMonth(String url, String sdate) throws Exception {
+        HttpRequest req = requestBuilder(url).GET().build();
+        SimpleResp resp = send(req);
+        if (resp.statusCode() == 422) {
+            throw new NeedsVerifyException();
+        }
+        if (resp.statusCode() != 200) {
+            throw new IllegalStateException("HTTP " + resp.statusCode());
+        }
+        JsonNode root = mapper.readTree(resp.body());
+        JsonNode fh = root.path("club_friend_history");
+        java.util.Map<Long, JsonNode> lastByVid = new java.util.LinkedHashMap<>();
+        if (fh.isArray()) {
+            for (JsonNode e : fh) {
+                long vid = e.path("friend_viewer_id").asLong();
+                JsonNode cur = lastByVid.get(vid);
+                if (cur == null || e.path("actual_date").asInt() >= cur.path("actual_date").asInt()) {
+                    lastByVid.put(vid, e);
+                }
+            }
+        }
+        List<MonthMember> members = new java.util.ArrayList<>();
+        for (JsonNode e : lastByVid.values()) {
+            members.add(new MonthMember(
+                    e.path("friend_viewer_id").asLong(),
+                    e.path("friend_name").asText(),
+                    e.path("interpolated_fan_count").asLong(),
+                    e.path("adjusted_fan_gain_cumulative").asLong()
+            ));
+        }
+        return new MonthData(sdate, members);
+    }
+
+    /** 某月单个成员的月末数据 */
+    public record MonthMember(long viewerId, String name, long endFan, long gain) {
+    }
+
+    /** 某月全部成员数据 */
+    public record MonthData(String sdate, List<MonthMember> members) {
     }
 
     /**

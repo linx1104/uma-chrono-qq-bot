@@ -17,6 +17,7 @@ import java.util.List;
 public record ClubData(
         String queryName,
         String name,
+        long circleId,
         long fanCount,
         long dailyAverage,
         long monthlyAverage,

@@ -203,6 +203,7 @@ public class QqWebSocketClient {
     private void dispatch(String type, JsonNode d, int seq) {
         switch (type) {
             case "GROUP_AT_MESSAGE_CREATE" -> botService.onGroupAtMessage(d, seq);
+            case "GROUP_MESSAGE_CREATE" -> botService.onGroupAllMessage(d, seq);
             case "C2C_MESSAGE_CREATE" -> botService.onC2cMessage(d, seq);
             default -> {
             }
